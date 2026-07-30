@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ashish's Road to Formula 1 | An Interactive Data Story</title>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       1. GLOBAL SYSTEM & F1 THEME STYLES
+       ========================================================================== */
+    :root {
+      --bg-dark: #0b0e14;
+      --panel-bg: #161b22;
+      --card-bg: #21262d;
+      --accent-red: #ff1801;
+      --accent-cyan: #00f0ff;
+      --accent-gold: #ffd700;
+      --accent-green: #38ef7d;
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --border-color: #30363d;
+      --font-f1: 'Titillium Web', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-f1);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Background Telemetry Grid Effect */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* ==========================================================================
+       2. FIXED TELEMETRY DASHBOARD (PROBABILITY COUNTER)
+       ========================================================================== */
+    .telemetry-hud {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 320px;
+      background: rgba(22, 27, 34, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-top: 3px solid var(--accent-red);
+      border-radius: 8px;
+      padding: 16px;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .hud-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-red);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-red);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+
+    .hud-metric {
+      margin-bottom: 10px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      transition: all 0.4s ease;
+    }
+
+    .metric-value.gold { color: var(--accent-gold); }
+    .metric-value.red { color: var(--accent-red); }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: var(--card-bg);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+      transition: width 0.5s ease;
+    }
+
+    /* ==========================================================================
+       3. HERO SECTION
+       ========================================================================== */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 0 10%;
+      position: relative;
+    }
+
+    .hero-tag {
+      color: var(--accent-red);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .hero-title {
+      font-size: 64px;
+      font-weight: 900;
+      line-height: 1.05;
+      text-transform: uppercase;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    .hero-title span {
+      color: var(--accent-gold);
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin-bottom: 40px;
+    }
+
+    .scroll-indicator {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+      60% { transform: translateY(-4px); }
+    }
+
+    /* ==========================================================================
+       4. STORY STAGES (SCROLL CONTENT)
+       ========================================================================== */
+    .container {
+      padding: 0 10% 100px 10%;
+      max-width: 1200px;
+    }
+
+    .stage-section {
+      min-height: 90vh;
+      padding: 60px 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-left: 2px dashed var(--border-color);
+      padding-left: 40px;
+      position: relative;
+    }
+
+    .stage-section::before {
+      content: "";
+      position: absolute;
+      left: -9px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--bg-dark);
+      border: 3px solid var(--accent-cyan);
+      transition: all 0.3s ease;
+    }
+
+    .stage-section.active::before {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--accent-cyan);
+      transform: scale(1.3);
+    }
+
+    .stage-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.1);
+      padding: 4px 12px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 12px;
+      width: fit-content;
+    }
+
+    .stage-title {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .stage-desc {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin-bottom: 30px;
+    }
+
+    /* ==========================================================================
+       5. INTERACTIVE VISUALIZATIONS & HOVER CARDS
+       ========================================================================== */
+    .viz-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 20px;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .viz-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-cyan);
+    }
+
+    /* Stage 1: Dot Grid Visual */
+    .dot-grid {
+      display: grid;
+      grid-template-columns: repeat(25, 1fr);
+      gap: 6px;
+      background: var(--bg-dark);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .dot {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--card-bg);
+      transition: transform 0.2s ease, background-color 0.2s ease;
+      cursor: pointer;
+    }
+
+    .dot:hover {
+      transform: scale(2);
+      z-index: 10;
+    }
+
+    .dot.blue { background: var(--accent-cyan); box-shadow: 0 0 6px var(--accent-cyan); }
+    .dot.gold { background: var(--accent-gold); box-shadow: 0 0 10px var(--accent-gold); animation: pulse 1s infinite; }
+
+    /* Legend Box */
+    .legend-box {
+      display: flex;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Stage 2 & 3: Interactive Bar / Sankey Flow Visuals */
+    .flow-bar-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .flow-label {
+      width: 180px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .flow-track {
+      flex-grow: 1;
+      height: 28px;
+      background: var(--bg-dark);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .flow-fill {
+      height: 100%;
+      background: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #000;
+      font-weight: 700;
+      transition: width 1s ease;
+    }
+
+    .flow-fill.red { background: var(--accent-red); color: #fff; }
+    .flow-fill.gold { background: var(--accent-gold); }
+    .flow-fill.green { background: var(--accent-green); }
+
+    /* Tooltip styling on hover */
+    [data-tooltip] {
+      position: relative;
+      cursor: pointer;
+    }
+
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card-bg);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      border: 1px solid var(--border-color);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 100;
+    }
+
+    [data-tooltip]:hover::after {
+      opacity: 1;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .telemetry-hud { width: calc(100% - 40px); top: auto; bottom: 20px; right: 20px; }
+      .hero-title { font-size: 38px; }
+      .dot-grid { grid-template-columns: repeat(15, 1fr); }
+      .flow-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .flow-track { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================================================
+       FIXED TELEMETRY DASHBOARD (LIVE PROBABILITY COUNTER)
+       ========================================================================== -->
+  <aside class="telemetry-hud">
+    <div class="hud-header">
+      <span class="hud-title">Telemetry Target: Ashish</span>
+      <span class="live-dot"></span>
+    </div>
+    
+    <div class="hud-metric">
+      <div class="metric-label">Current Stage</div>
+      <div id="hud-stage-name" style="font-size: 14px; font-weight: 700; color: #fff;">Stage 0: Grassroots</div>
+    </div>
+
+    <div class="hud-metric">
+      <div class="metric-label">F1 Survival Probability</div>
+      <div id="hud-probability" class="metric-value">100.00%</div>
+      <div class="progress-bar-container">
+        <div id="hud-progress-bar" class="progress-bar"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+      <div>
+        <div class="metric-label">Age</div>
+        <div id="hud-age" style="font-family: var(--font-mono); font-weight: 700;">4 Yrs</div>
+      </div>
+      <div>
+        <div class="metric-label">Est. Budget / Yr</div>
+        <div id="hud-budget" style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-gold);">₹2 Lakhs</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==========================================================================
+       HERO SECTION
+       ========================================================================== -->
+  <section class="hero">
+    <div class="hero-tag">// APPLIED DATA VISUALIZATION</div>
+    <h1 class="hero-title">The <span>0.0005%</span> Journey to Formula 1</h1>
+    <p class="hero-subtitle">Tracking Ashish (Age 4, India) as he navigates the elite motorsports ladder—from Kid Karts to the 20 active seats on the Formula 1 grid.</p>
+    <div class="scroll-indicator">
+      <span>SCROLL TO START TELEMETRY</span>
+      <span>↓</span>
+    </div>
+  </section>
+
+  <div class="container">
+
+    <!-- ==========================================================================
+         STAGE 1: KARTING ENTRY (THE 500-DOT GRID)
+         ========================================================================== -->
+    <section class="stage-section" id="stage-1" data-stage="Stage 1: Karting Entry" data-prob="1.40%" data-age="4–12" data-budget="₹2L – ₹25L" data-pct="100">
+      <span class="stage-badge">STAGE 01 // AGES 4–12</span>
+      <h2 class="stage-title">Step 1: Grassroots Karting to World Finals</h2>
+      <p class="stage-desc">Ashish starts at age 4 in India. Worldwide, roughly 80,000 kids enter karting. Only a tiny fraction earn an international FIA license, and just 36 drivers qualify for the World Championship final grid.</p>
+
+      <div class="viz-card">
+        <h4 style="margin-bottom: 8px;">The Karting Funnel (1 Dot = 160 Drivers)</h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Hover over individual dots to inspect the filtered pool.</p>
+        
+        <!-- 500 Dot Grid Generated via JavaScript -->
+        <div class="dot-grid" id="karting-grid"></div>
+
+        <div class="legend-box">
+          <div class="legend-item"><span style="width: 10px; height: 10px; background: var(--card-bg); border-radius: 50%;"></span> 492 Dots (78,720 Grassroots Drop-outs)</div>
+          <div class="legend-item"><span style="width: 10px; height: 10px; background: var(--accent-cyan); border-radius: 50%;"></span> 7 Dots (1,120 FIA International Licenses)</div>
+          <div class="legend-item"><span style="width: 10px; height: 10px; background: var(--accent-gold); border-radius: 50%;"></span> 1 Dot (36 World Finalists - <b>Ashish</b>)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         STAGE 2: FORMULA 4 TO FORMULA 3
+         ========================================================================== -->
+    <section class="stage-section" id="stage-2" data-stage="Stage 2: Single-Seater Leap" data-prob="0.0037%" data-age="15–17" data-budget="₹3.5Cr – ₹15Cr" data-pct="35">
+      <span class="stage-badge">STAGE 02 // AGES 15–17</span>
+      <h2 class="stage-title">Step 2: The Single-Seater Bottleneck (F4 → F3)</h2>
+      <p class="stage-desc">At age 15, Ashish makes his single-seater debut in Formula 4. Across 13 global series, ~400 drivers race in F4. However, FIA Formula 3 has a hard cap of 30 total seats—with only ~15 rookie slots opening annually.</p>
+
+      <div class="viz-card">
+        <h4>Conversion Flow: Global F4 to FIA Formula 3</h4>
+        <div class="flow-bar-container">
+          
+          <div class="flow-row" data-tooltip="400 active drivers globally across all F4 series">
+            <div class="flow-label">Global F4 Pool</div>
+            <div class="flow-track">
+              <div class="flow-fill" style="width: 100%;">400 Drivers (100%)</div>
+            </div>
+          </div>
+
+          <div class="flow-row" data-tooltip="Formula Regional (FRECA/GB3) proving grounds">
+            <div class="flow-label">Formula Regional</div>
+            <div class="flow-track">
+              <div class="flow-fill red" style="width: 20%;">80 Drivers (20%)</div>
+            </div>
+          </div>
+
+          <div class="flow-row" data-tooltip="Strict 30-car grid hard cap in FIA F3">
+            <div class="flow-label">FIA F3 Rookie Slots</div>
+            <div class="flow-track">
+              <div class="flow-fill gold" style="width: 3.75%;">15 Rookies (3.75%)</div>
+            </div>
+          </div>
+
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 16px;">💡 <b>Financial Wall:</b> Over 70% of drivers stall at this stage due to the €1.5M/year budget requirement rather than driving skill.</p>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         STAGE 3: FORMULA 2 MATRIX
+         ========================================================================== -->
+    <section class="stage-section" id="stage-3" data-stage="Stage 3: FIA Formula 2" data-prob="0.0011%" data-age="18–19" data-budget="₹20Cr – ₹28Cr" data-pct="15">
+      <span class="stage-badge">STAGE 03 // AGES 18–19</span>
+      <h2 class="stage-title">Step 3: The FIA Formula 2 Grid Matrix</h2>
+      <p class="stage-desc">The final stepping stone. 22 drivers compete in F2 directly on F1 Grand Prix weekends under intense pressure from F1 Junior Team scouts.</p>
+
+      <div class="viz-card">
+        <h4>F2 Grid Outcomes (22 Active Seats)</h4>
+        <div class="flow-bar-container">
+          
+          <div class="flow-row" data-tooltip="Immediate promotion to a full-time F1 race seat">
+            <div class="flow-label">Direct F1 Seat</div>
+            <div class="flow-track">
+              <div class="flow-fill green" style="width: 9.1%;">2 Drivers (~9.1%)</div>
+            </div>
+          </div>
+
+          <div class="flow-row" data-tooltip="F1 Reserve, test, or simulator driver contract">
+            <div class="flow-label">F1 Reserve / Test</div>
+            <div class="flow-track">
+              <div class="flow-fill" style="width: 13.6%;">3 Drivers (~13.6%)</div>
+            </div>
+          </div>
+
+          <div class="flow-row" data-tooltip="Returning for a second or third year in F2">
+            <div class="flow-label">Retained in F2</div>
+            <div class="flow-track">
+              <div class="flow-fill gold" style="width: 45.5%;">10 Drivers (~45.5%)</div>
+            </div>
+          </div>
+
+          <div class="flow-row" data-tooltip="Transition to IndyCar, Formula E, or WEC GT3">
+            <div class="flow-label">Career Pivot</div>
+            <div class="flow-track">
+              <div class="flow-fill red" style="width: 31.8%;">7 Drivers (~31.8%)</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         STAGE 4: THE FORMULA 1 GRID (DESTINATION)
+         ========================================================================== -->
+    <section class="stage-section" id="stage-4" data-stage="Stage 4: Formula 1 Grid" data-prob="0.0005%" data-age="20+ Yrs" data-budget="Fully Funded (Paid Professional)" data-pct="2">
+      <span class="stage-badge">STAGE 04 // THE DESTINATION</span>
+      <h2 class="stage-title">Step 4: The 20-Seat Formula 1 Grid</h2>
+      <p class="stage-desc">The pinnacle of world sport. Ashish completes his journey from a 4-year-old kart racer in India to earning one of the 20 active Formula 1 seats on the planet.</p>
+
+      <div class="viz-card" style="border-color: var(--accent-gold);">
+        <h3 style="color: var(--accent-gold); margin-bottom: 12px;">🏆 Milestone Achieved: F1 Race Seat</h3>
+        <p>Out of 80,000 kids who entered a kart at age 4, Ashish defies the <b>1 in 200,000 cumulative odds</b> to line up on the Sunday Grand Prix grid.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ==========================================================================
+       6. JAVASCRIPT: DYNAMIC SCROLL INTERACTION & TELEMETRY UPDATES
+       ========================================================================== -->
+  <script>
+    // 1. Build the 500-Dot Grid dynamically
+    const kartingGrid = document.getElementById('karting-grid');
+    if (kartingGrid) {
+      // 492 Gray Dots
+      for (let i = 0; i < 492; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        dot.setAttribute('data-tooltip', 'Grassroots / Local Applicant (Drop-out)');
+        kartingGrid.appendChild(dot);
+      }
+      // 7 Cyan Dots
+      for (let i = 0; i < 7; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot blue';
+        dot.setAttribute('data-tooltip', 'FIA International License Holder (~1,123 Pool)');
+        kartingGrid.appendChild(dot);
+      }
+      // 1 Gold Dot (Ashish)
+      const ashishDot = document.createElement('div');
+      ashishDot.className = 'dot gold';
+      ashishDot.setAttribute('data-tooltip', 'Ashish (FIA World Championship Final Grid - 36 Drivers)');
+      kartingGrid.appendChild(ashishDot);
+    }
+
+    // 2. Scroll-Driven Telemetry HUD Updates
+    const stages = document.querySelectorAll('.stage-section');
+    const hudStage = document.getElementById('hud-stage-name');
+    const hudProb = document.getElementById('hud-probability');
+    const hudAge = document.getElementById('hud-age');
+    const hudBudget = document.getElementById('hud-budget');
+    const hudBar = document.getElementById('hud-progress-bar');
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -40% 0px',
+      threshold: 0.2
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Remove active class from all
+          stages.forEach(s => s.classList.remove('active'));
+          
+          // Add active class to current
+          entry.target.classList.add('active');
+
+          // Read data attributes
+          const stageName = entry.target.getAttribute('data-stage');
+          const prob = entry.target.getAttribute('data-prob');
+          const age = entry.target.getAttribute('data-age');
+          const budget = entry.target.getAttribute('data-budget');
+          const pct = entry.target.getAttribute('data-pct');
+
+          // Update HUD
+          if (hudStage) hudStage.textContent = stageName;
+          if (hudProb) {
+            hudProb.textContent = prob;
+            if (prob === '0.0005%') {
+              hudProb.className = 'metric-value gold';
+            } else if (parseFloat(prob) < 0.1) {
+              hudProb.className = 'metric-value red';
+            } else {
+              hudProb.className = 'metric-value';
+            }
+          }
+          if (hudAge) hudAge.textContent = age;
+          if (hudBudget) hudBudget.textContent = budget;
+          if (hudBar) hudBar.style.width = pct + '%';
+        }
+      });
+    }, observerOptions);
+
+    stages.forEach(stage => observer.observe(stage));
+  </script>
+</body>
+</html>
