@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F3 Grid & F4 Transition Waffle Chart</title>
+    <style>
+        :root {
+            --bg-color: #0b0d10;
+            --card-bg: #161a20;
+            --brand-red: #B10012;
+            --brand-white: #FFFFFF;
+            --muted-gray: #303744;
+            --text-muted: #9ba6b5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--brand-white);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+
+        .chart-card {
+            background-color: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 35px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.7);
+        }
+
+        .header {
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Legend Styling */
+        .legend-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            transition: background 0.2s ease;
+        }
+
+        .legend-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .dot-sample {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Waffle Sections Layout */
+        .sections-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 650px) {
+            .sections-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .waffle-box {
+            background-color: #0f1217;
+            border: 1px solid #232a35;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .box-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Grid Containers */
+        .grid {
+            display: grid;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .grid-f3 {
+            grid-template-columns: repeat(6, 1fr);
+        }
+
+        .grid-f4 {
+            grid-template-columns: repeat(5, 1fr);
+        }
+
+        /* Unit Dots */
+        .dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .dot:hover {
+            transform: scale(1.35);
+            z-index: 10;
+        }
+
+        /* Colors & Styles */
+        .dot.f4-assigned {
+            background-color: var(--brand-white);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .dot.f3-returning {
+            background-color: var(--muted-gray);
+        }
+
+        .dot.f4-cut {
+            background-color: var(--brand-red);
+            box-shadow: 0 0 10px rgba(177, 0, 18, 0.7);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: #ffffff;
+            color: #000000;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chart-card">
+        <div class="header">
+            <h1 class="title">F3 Capacity & F4 Applicant Waffle Breakdown</h1>
+            <p class="subtitle">30 Total F3 Grid Seats vs 15 Incoming F4 Applicants (1 Dot = 1 Driver)</p>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-container">
+            <div class="legend-item" onclick="highlightCategory('f3-returning')">
+                <span class="dot-sample" style="background-color: var(--muted-gray);"></span>
+                Returning F3 Drivers (18)
+            </div>
+            <div class="legend-item" onclick="highlightCategory('f4-assigned')">
+                <span class="dot-sample" style="background-color: var(--brand-white);"></span>
+                New F4 Graduates (12)
+            </div>
+            <div class="legend-item" onclick="highlightCategory('f4-cut')">
+                <span class="dot-sample" style="background-color: var(--brand-red);"></span>
+                Cut F4 Applicants (3)
+            </div>
+        </div>
+
+        <!-- Main Grid Layout -->
+        <div class="sections-wrapper">
+            <!-- Left Side: F3 Grid (30 Dots) -->
+            <div class="waffle-box">
+                <div class="box-title">F3 Grid Breakdown (30 Seats)</div>
+                <div class="grid grid-f3" id="f3Grid"></div>
+            </div>
+
+            <!-- Right Side: F4 Pool Breakdown (15 Dots) -->
+            <div class="waffle-box">
+                <div class="box-title">Incoming F4 Class (15 Applicants)</div>
+                <div class="grid grid-f4" id="f4Grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        const tooltip = document.getElementById('tooltip');
+
+        // Build F3 Grid (18 Returning + 12 New F4 Graduates)
+        const f3Grid = document.getElementById('f3Grid');
+        
+        // 18 Returning Veterans
+        for (let i = 0; i < 18; i++) {
+            const dot = createDot('f3-returning', `Returning F3 Driver #${i + 1}`);
+            f3Grid.appendChild(dot);
+        }
+        // 12 New F4 Graduates
+        for (let i = 0; i < 12; i++) {
+            const dot = createDot('f4-assigned', `F4 Graduate Seat #${i + 1}`);
+            f3Grid.appendChild(dot);
+        }
+
+        // Build F4 Applicant Pool (12 Successful + 3 Cut)
+        const f4Grid = document.getElementById('f4Grid');
+        
+        // 12 Successful Applicants
+        for (let i = 0; i < 12; i++) {
+            const dot = createDot('f4-assigned', `F4 Applicant #${i + 1}: Promoted to F3`);
+            f4Grid.appendChild(dot);
+        }
+        // 3 Unassigned Applicants
+        for (let i = 0; i < 3; i++) {
+            const dot = createDot('f4-cut', `F4 Applicant #${i + 13}: Unassigned / Cut`);
+            f4Grid.appendChild(dot);
+        }
+
+        function createDot(type, label) {
+            const dot = document.createElement('div');
+            dot.className = `dot ${type}`;
+
+            dot.addEventListener('mouseenter', (e) => {
+                tooltip.innerText = label;
+                tooltip.classList.add('visible');
+            });
+
+            dot.addEventListener('mousemove', (e) => {
+                tooltip.style.left = `${e.pageX + 10}px`;
+                tooltip.style.top = `${e.pageY - 28}px`;
+            });
+
+            dot.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+
+            return dot;
+        }
+
+        function highlightCategory(category) {
+            const allDots = document.querySelectorAll('.dot');
+            allDots.forEach(dot => {
+                if (dot.classList.contains(category)) {
+                    dot.style.opacity = '1';
+                    dot.style.transform = 'scale(1.3)';
+                } else {
+                    dot.style.opacity = '0.2';
+                    dot.style.transform = 'scale(0.85)';
+                }
+            });
+
+            setTimeout(() => {
+                allDots.forEach(dot => {
+                    dot.style.opacity = '1';
+                    dot.style.transform = '';
+                });
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
